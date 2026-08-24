@@ -111,8 +111,6 @@ checkChecksumErrors(
 
         if (backupData->backupError != NULL && varBool(backupData->backupError))
         {
-            ASSERT(backupData->optionChecksumPage);
-
             const String *message = strNewFmt(
                 "oldest retained backup %s contains invalid page checksum(s)\n"
                 "HINT: use info --set command to get details about errors in the backup.",
