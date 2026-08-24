@@ -276,18 +276,14 @@ backupJobResult(
 
                                 // Make message plural when appropriate
                                 const char *const plural = errorTotalMin > 1 ? "s" : "";
-
-                                if (cfgOptionBool(cfgOptChecksumPageError))
-                                {
-                                    THROW_FMT(
-                                        ChecksumError,
-                                        "invalid page checksum%s found in file %s at page%s %s", plural, strZ(fileLog), plural,
-                                        strZ(error));
-                                }
-                                // ??? Update formatting after migration
-                                LOG_WARN_FMT(
+                                const String *message = strNewFmt(
                                     "invalid page checksum%s found in file %s at page%s %s", plural, strZ(fileLog), plural,
                                     strZ(error));
+
+                                if (cfgOptionBool(cfgOptChecksumPageError))
+                                    THROW(ChecksumError, strZ(message));
+
+                                LOG_WARN(strZ(message));
 
                                 (*warningTotal)++;
                             }
