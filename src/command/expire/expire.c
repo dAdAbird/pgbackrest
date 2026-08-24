@@ -111,15 +111,19 @@ checkChecksumErrors(
 
         if (backupData->backupError != NULL && varBool(backupData->backupError))
         {
-            const String *message = strNewFmt(
-                "oldest retained backup %s contains invalid page checksum(s)\n"
-                "HINT: use info --set command to get details about errors in the backup.",
-                strZ(backupLabel));
+            MEM_CONTEXT_TEMP_BEGIN()
+            {
+                const String *message = strNewFmt(
+                    "oldest retained backup %s contains invalid page checksum(s)\n"
+                    "HINT: use info --set command to get details about errors in the backup.",
+                    strZ(backupLabel));
 
-            if (shouldFail)
-                THROW(ChecksumError, strZ(message));
+                if (shouldFail)
+                    THROW(ChecksumError, strZ(message));
 
-            LOG_WARN_FMT("%s: %s", cfgOptionGroupName(cfgOptGrpRepo, repoIdx), strZ(message));
+                LOG_WARN_FMT("%s: %s", cfgOptionGroupName(cfgOptGrpRepo, repoIdx), strZ(message));
+            }
+            MEM_CONTEXT_TEMP_END();
         }
     }
 
