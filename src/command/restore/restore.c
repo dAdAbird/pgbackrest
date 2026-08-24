@@ -270,7 +270,7 @@ cmdRestore(void)
                 CFGCMD_RESTORE " command encountered page checksum error(s) in %u file(s), check the log file for details",
                 checksumErrorFileTotal);
 
-            if (cfgOptionBool(checksumErrorFileTotal))
+            if (cfgOptionBool(cfgOptChecksumPageError))
                 THROW(ChecksumError, strZ(message));
 
             LOG_WARN(strZ(message));
