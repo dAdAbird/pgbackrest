@@ -298,10 +298,10 @@ expireFullBackup(InfoBackup *const infoBackup, const unsigned int repoIdx)
                 {
                     const String *const oldestRetainedBackupLabel =
                         strLstGet(currentBackupList, strLstSize(currentBackupList) - fullRetention);
-                    
+
                     checkChecksumErrors(infoBackup, oldestRetainedBackupLabel, repoIdx, true);
                 }
-                
+
                 // Expire all backups that depend on the full backup
                 for (unsigned int fullIdx = 0; fullIdx < strLstSize(currentBackupList) - fullRetention; fullIdx++)
                 {

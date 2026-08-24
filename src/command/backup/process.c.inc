@@ -210,7 +210,7 @@ backupJobResult(
                             " corrupted.\n"
                             "NOTE: this does not indicate a problem with the PostgreSQL page checksums.",
                             strZ(file.name), strZ(strNewEncode(encodingHex, BUF(file.checksumSha1, HASH_TYPE_SHA1_SIZE))));
-                        
+
                         (*warningTotal)++;
                     }
 

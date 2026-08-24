@@ -237,7 +237,7 @@ restoreJobResult(
                 {
                     LOG_WARN_FMT(
                         "invalid page checksum(s) found in file %s", strZ(restoreFilePgPath(manifest, file.name)));
-                    
+
                     (*checksumErrorFileTotal)++;
                 }
 

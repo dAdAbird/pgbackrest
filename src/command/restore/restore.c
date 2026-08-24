@@ -264,11 +264,11 @@ cmdRestore(void)
         LOG_INFO_FMT(
             "restore size = %s, file total = %u", strZ(strSizeFormat(sizeRestored)), manifestFileTotal(jobData.manifest));
 
-        if(checksumErrorFileTotal > 0)
+        if (checksumErrorFileTotal > 0)
         {
             const String *message = strNewFmt(
                 CFGCMD_RESTORE " command encountered page checksum error(s) in %u file(s), check the log file for details",
-                    checksumErrorFileTotal);
+                checksumErrorFileTotal);
 
             if (cfgOptionBool(checksumErrorFileTotal))
                 THROW(ChecksumError, strZ(message));

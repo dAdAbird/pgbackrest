@@ -307,7 +307,6 @@ cmdBackup(void)
 
         if (warningTotal > 0)
             LOG_WARN_FMT(CFGCMD_BACKUP " command encountered %u warning(s), check the log file for details", warningTotal);
-
     }
     MEM_CONTEXT_TEMP_END();
 
