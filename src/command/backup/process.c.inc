@@ -210,8 +210,6 @@ backupJobResult(
                             " corrupted.\n"
                             "NOTE: this does not indicate a problem with the PostgreSQL page checksums.",
                             strZ(file.name), strZ(strNewEncode(encodingHex, BUF(file.checksumSha1, HASH_TYPE_SHA1_SIZE))));
-
-                        (*warningTotal)++;
                     }
 
                     // If the file had page checksums calculated during the copy
@@ -237,7 +235,6 @@ backupJobResult(
                                 LOG_WARN_FMT(
                                     "page misalignment in file %s: file size %" PRIu64 " is not divisible by page size %u",
                                     strZ(fileLog), copySize, pageSize);
-                                (*warningTotal)++;
                             }
                             else
                             {
