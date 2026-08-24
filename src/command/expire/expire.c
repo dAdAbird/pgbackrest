@@ -105,7 +105,7 @@ checkChecksumErrors(
 
     ASSERT(infoBackup != NULL);
 
-    if (infoBackupDataTotal(infoBackup) > 0 && (!cfgOptionValid(cfgOptDryRun) || !cfgOptionBool(cfgOptDryRun)))
+    if (infoBackupDataTotal(infoBackup) > 0)
     {
         const InfoBackupData *const backupData = infoBackupDataByLabel(infoBackup, backupLabel);
 
@@ -296,7 +296,7 @@ expireFullBackup(InfoBackup *const infoBackup, const unsigned int repoIdx)
             {
                 // If checksum-page-error is set, check the would-be-oldest retained backup and abort with an error if it has
                 // checksum errors.
-                if (cfgOptionBool(cfgOptChecksumPageError))
+                if (cfgOptionBool(cfgOptChecksumPageError) && (!cfgOptionValid(cfgOptDryRun) || !cfgOptionBool(cfgOptDryRun)))
                 {
                     const String *const oldestRetainedBackupLabel =
                         strLstGet(currentBackupList, strLstSize(currentBackupList) - fullRetention);
