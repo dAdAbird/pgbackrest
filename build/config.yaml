@@ -1162,6 +1162,7 @@ option:
       main: {}
 
   checksum-page-error:
+    section: global
     type: boolean
     command:
       backup:

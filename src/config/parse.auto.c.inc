@@ -1648,8 +1648,10 @@ static const ParseRuleOption parseRuleOption[CFG_OPTION_TOTAL] =
     (                                                                                                     // opt/checksum-page-error
         PARSE_RULE_OPTION_NAME("checksum-page-error"),                                                    // opt/checksum-page-error
         PARSE_RULE_OPTION_TYPE(Boolean),                                                                  // opt/checksum-page-error
+        PARSE_RULE_OPTION_NEGATE(true),                                                                   // opt/checksum-page-error
+        PARSE_RULE_OPTION_RESET(true),                                                                    // opt/checksum-page-error
         PARSE_RULE_OPTION_REQUIRED(true),                                                                 // opt/checksum-page-error
-        PARSE_RULE_OPTION_SECTION(CommandLine),                                                           // opt/checksum-page-error
+        PARSE_RULE_OPTION_SECTION(Global),                                                                // opt/checksum-page-error
                                                                                                           // opt/checksum-page-error
         PARSE_RULE_OPTION_COMMAND_ROLE_MAIN_VALID_LIST                                                    // opt/checksum-page-error
         (                                                                                                 // opt/checksum-page-error
