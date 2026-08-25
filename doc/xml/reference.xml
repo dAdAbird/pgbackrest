@@ -2597,7 +2597,7 @@
                         <summary>Error on Invalid Page Checksums.</summary>
 
                         <text>
-                            <p>If any file contains checksum errors, an error will be emitted at the end of the <cmd>restore</cmd> if this option is enabled (default). And a warning if the option is disabled.</p>
+                            <p>If any file contains checksum errors, an error will be emitted at the end of the <cmd>restore</cmd> if this option is enabled. And a warning if the option is disabled.</p>
 
                             <p>A warning will be emitted for each file with checksum errors despite the setting of this option.</p>
                         </text>
