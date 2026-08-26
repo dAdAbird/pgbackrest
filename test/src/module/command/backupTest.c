@@ -3241,6 +3241,63 @@ testRun(void)
         }
 
         // -------------------------------------------------------------------------------------------------------------------------
+        TEST_TITLE("incr backup fails immediately on invalid page checksum when checksum-page-error=y");
+
+        backupTimeStart = BACKUP_EPOCH + 2400000;
+
+        {
+            // Load options
+            StringList *argList = strLstNew();
+            hrnCfgArgRawZ(argList, cfgOptStanza, "test1");
+            hrnCfgArgRaw(argList, cfgOptRepoPath, repoPath);
+            hrnCfgArgRaw(argList, cfgOptPgPath, pg1Path);
+            hrnCfgArgRawZ(argList, cfgOptRepoRetentionFull, "1");
+            hrnCfgArgRawStrId(argList, cfgOptType, backupTypeIncr);
+            hrnCfgArgRawBool(argList, cfgOptChecksumPageError, true);
+            HRN_CFG_LOAD(cfgCmdBackup, argList);
+
+            // File with bad page checksums (pages 0 and 3)
+            Buffer *relation = bufNew(pgPageSize8 * 4);
+            memset(bufPtr(relation), 0, bufSize(relation));
+            *(PageHeaderData *)(bufPtr(relation) + (pgPageSize8 * 0x00)) = (PageHeaderData){.pd_upper = 0xFF};
+            *(PageHeaderData *)(bufPtr(relation) + (pgPageSize8 * 0x01)) = (PageHeaderData){.pd_upper = 0x00};
+            *(PageHeaderData *)(bufPtr(relation) + (pgPageSize8 * 0x02)) = (PageHeaderData){.pd_upper = 0xFF};
+            (bufPtr(relation) + (pgPageSize8 * 0x02))[pgPageSize8 - 1] = 0xFF;
+            ((PageHeaderData *)(bufPtr(relation) + (pgPageSize8 * 0x02)))->pd_checksum = pgPageChecksum(
+                bufPtr(relation) + (pgPageSize8 * 0x02), 2, pgPageSize8);
+            *(PageHeaderData *)(bufPtr(relation) + (pgPageSize8 * 0x03)) = (PageHeaderData){.pd_upper = 0x00};
+            (bufPtr(relation) + (pgPageSize8 * 0x03))[pgPageSize8 - 1] = 0xEE;
+            ((PageHeaderData *)(bufPtr(relation) + (pgPageSize8 * 0x03)))->pd_checksum = 1;
+            bufUsedSet(relation, bufSize(relation));
+
+            HRN_STORAGE_PUT(storagePgWrite(), PG_PATH_BASE "/1/3", relation, .timeModified = backupTimeStart);
+
+            // Run backup and confirm it aborts as soon as the first invalid page checksum is found rather than warning and
+            // continuing to completion
+            hrnBackupPqScriptP(
+                PG_VERSION_11, backupTimeStart, .timeline = 0x2C, .walTotal = 2, .walSwitch = true, .errorAfterCopyStart = true);
+            TEST_ERROR(
+                hrnCmdBackup(), ChecksumError,
+                "invalid page checksums found in file " TEST_PATH "/pg1/base/1/3 at pages 0, 3");
+
+            TEST_RESULT_LOG(
+                "P00   INFO: last backup label = 20191027-181320F, version = " PROJECT_VERSION "\n"
+                "P00   INFO: execute backup start: backup begins after the next regular checkpoint completes\n"
+                "P00   INFO: backup start archive = 0000002C05DB8EB000000000, lsn = 5db8eb0/0\n"
+                "P00   INFO: check archive for segment 0000002C05DB8EB000000000\n"
+                "P00   WARN: a timeline switch has occurred since the 20191027-181320F backup, enabling delta checksum\n"
+                "            HINT: this is normal after restoring from backup or promoting a standby.\n"
+                "P01 DETAIL: backup file " TEST_PATH "/pg1/base/1/3 (32KB, [PCT]) checksum [SHA1]");
+
+            // Remove partial backup so it won't be resumed by the following test
+            HRN_STORAGE_PATH_REMOVE(
+                storageRepoWrite(), STORAGE_REPO_BACKUP "/20191027-181320F_20191030-014640I", .recurse = true);
+
+            // Remove test file
+            HRN_STORAGE_REMOVE(storagePgWrite(), "base/1/3", .errorOnMissing = true);
+        }
+
+        // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("online 11 incr backup with tablespaces");
 
         backupTimeStart = BACKUP_EPOCH + 2400000;
