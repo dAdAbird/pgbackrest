@@ -2240,7 +2240,7 @@
 
                 <option-list>
                     <option id="checksum-page-error" name="Error on Invalid Page Checksums">
-                        <summary>Error on Invalid Page Checksums.</summary>
+                        <summary>Error on invalid page checksums.</summary>
 
                         <text>
                             <p>If this option is enabled with the <br-option>checksum-page</br-option>, a first failure in checksum validation will abort a backup.</p>
@@ -2348,7 +2348,7 @@
 
                 <option-list>
                     <option id="checksum-page-error" name="Error on Invalid Page Checksums">
-                        <summary>Error on Invalid Page Checksums.</summary>
+                        <summary>Error on invalid page checksums.</summary>
 
                         <text>
                             <p>If enabled, the <cmd>expire</cmd> will stop and issue an error before any changes if the oldest retained backup would contain checksum errors. If this option is disabled, the <cmd>expire</cmd> will proceed and issue a warning if there are checksum errors in the oldest retained backup.</p>
@@ -2594,7 +2594,7 @@
 
                 <option-list>
                     <option id="checksum-page-error" name="Error on Invalid Page Checksums">
-                        <summary>Error on Invalid Page Checksums.</summary>
+                        <summary>Error on invalid page checksums.</summary>
 
                         <text>
                             <p>If any file contains checksum errors, an error will be emitted at the end of the <cmd>restore</cmd> if this option is enabled. And a warning if the option is disabled.</p>
