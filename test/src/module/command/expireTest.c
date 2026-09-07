@@ -247,7 +247,7 @@ testRun(void)
     }
 
     // *****************************************************************************************************************************
-    if (testBegin("checkChecksumErrors()"))
+    if (testBegin("expireChecksumErrorCheck()"))
     {
         // Load parameters so cfgOptionGroupName() can resolve the "repo1" prefix in the warning message. Use argListAvoidWarn so
         // the retention-full warning does not pollute the log output checked below.
@@ -320,26 +320,26 @@ testRun(void)
             "get empty backup.info");
 
         TEST_RESULT_VOID(
-            checkChecksumErrors(infoBackupEmpty, STRDEF("20181119-152138F"), 0, true),
+            expireChecksumErrorCheck(infoBackupEmpty, STRDEF("20181119-152138F"), 0, true),
             "no current backups - no error even though shouldFail is set");
 
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("backup-error flag never recorded - no warning");
 
         TEST_RESULT_VOID(
-            checkChecksumErrors(infoBackup, STRDEF("20181119-152900F"), 0, false), "backup-error not set - no warning");
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152900F"), 0, false), "backup-error not set - no warning");
 
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("backup-error is false - no warning");
 
         TEST_RESULT_VOID(
-            checkChecksumErrors(infoBackup, STRDEF("20181119-152800F"), 0, false), "backup-error false - no warning");
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152800F"), 0, false), "backup-error false - no warning");
 
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("backup-error is true, shouldFail=false - warning logged, no error thrown");
 
         TEST_RESULT_VOID(
-            checkChecksumErrors(infoBackup, STRDEF("20181119-152138F"), 0, false), "backup-error true - warn only");
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152138F"), 0, false), "backup-error true - warn only");
         TEST_RESULT_LOG(
             "P00   WARN: repo1: oldest retained backup 20181119-152138F contains invalid page checksum(s)\n"
             "            HINT: use info --set command to get details about errors in the backup.");
@@ -348,7 +348,7 @@ testRun(void)
         TEST_TITLE("backup-error is true, shouldFail=true - error thrown");
 
         TEST_ERROR(
-            checkChecksumErrors(infoBackup, STRDEF("20181119-152138F"), 0, true), ChecksumError,
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152138F"), 0, true), ChecksumError,
             "oldest retained backup 20181119-152138F contains invalid page checksum(s)\n"
             "HINT: use info --set command to get details about errors in the backup.");
     }

@@ -266,7 +266,7 @@ cmdRestore(void)
 
         if (checksumErrorFileTotal > 0)
         {
-            const String *message = strNewFmt(
+            const String *const message = strNewFmt(
                 CFGCMD_RESTORE " command encountered page checksum error(s) in %u file(s), check the log file for details",
                 checksumErrorFileTotal);
 

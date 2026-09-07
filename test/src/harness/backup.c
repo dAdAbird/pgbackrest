@@ -142,9 +142,7 @@ backupProcess(const BackupData *const backupData, Manifest *const manifest, cons
         hrnBackupLocal.scriptSize = 0;
     }
 
-    unsigned int const warningTotal = backupProcess_SHIMMED(backupData, manifest, cipherSpecManifest);
-
-    FUNCTION_HARNESS_RETURN(UINT, warningTotal);
+    FUNCTION_HARNESS_RETURN(UINT, backupProcess_SHIMMED(backupData, manifest, cipherSpecManifest));
 }
 
 /**********************************************************************************************************************************/

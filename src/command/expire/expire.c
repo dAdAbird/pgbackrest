@@ -93,14 +93,14 @@ expireBackup(InfoBackup *const infoBackup, const String *const backupLabel, cons
 Checks the given backup for checksum errors and throws an error or logs a warning depending on shouldFail
 ***********************************************************************************************************************************/
 static void
-checkChecksumErrors(
-    const InfoBackup *const infoBackup, const String *const backupLabel, const unsigned int repoIdx, bool shouldFail)
+expireChecksumErrorCheck(
+    const InfoBackup *const infoBackup, const String *const backupLabel, const unsigned int repoIdx, const bool error)
 {
     FUNCTION_LOG_BEGIN(logLevelDebug);
         FUNCTION_LOG_PARAM(INFO_BACKUP, infoBackup);
         FUNCTION_LOG_PARAM(STRING, backupLabel);
         FUNCTION_LOG_PARAM(UINT, repoIdx);
-        FUNCTION_LOG_PARAM(BOOL, shouldFail);
+        FUNCTION_LOG_PARAM(BOOL, error);
     FUNCTION_LOG_END();
 
     ASSERT(infoBackup != NULL);
@@ -118,7 +118,7 @@ checkChecksumErrors(
                     "HINT: use info --set command to get details about errors in the backup.",
                     strZ(backupLabel));
 
-                if (shouldFail)
+                if (error)
                     THROW(ChecksumError, strZ(message));
 
                 LOG_WARN_FMT("%s: %s", cfgOptionGroupName(cfgOptGrpRepo, repoIdx), strZ(message));
@@ -298,10 +298,10 @@ expireFullBackup(InfoBackup *const infoBackup, const unsigned int repoIdx)
                 // checksum errors.
                 if (cfgOptionBool(cfgOptChecksumPageError))
                 {
-                    const String *const oldestRetainedBackupLabel =
-                        strLstGet(currentBackupList, strLstSize(currentBackupList) - fullRetention);
+                    const String *const oldestRetainedBackupLabel = strLstGet(
+                        currentBackupList, strLstSize(currentBackupList) - fullRetention);
 
-                    checkChecksumErrors(infoBackup, oldestRetainedBackupLabel, repoIdx, true);
+                    expireChecksumErrorCheck(infoBackup, oldestRetainedBackupLabel, repoIdx, true);
                 }
 
                 // Expire all backups that depend on the full backup
@@ -1237,7 +1237,7 @@ cmdExpire(void)
 
                 // Check the oldest retained backup for page checksum errors and issue a warning if any
                 if (infoBackupDataTotal(infoBackup) > 0)
-                    checkChecksumErrors(infoBackup, infoBackupData(infoBackup, 0).backupLabel, repoIdx, false);
+                    expireChecksumErrorCheck(infoBackup, infoBackupData(infoBackup, 0).backupLabel, repoIdx, false);
             }
             CATCH_ANY()
             {

@@ -260,7 +260,7 @@ cmdBackup(void)
         backupManifestSaveCopy(manifest, cipherSpecManifest, false);
 
         // Process the backup manifest
-        unsigned int const warningTotal = backupProcess(backupData, manifest, cipherSpecManifest);
+        const unsigned int warningTotal = backupProcess(backupData, manifest, cipherSpecManifest);
 
         // Check that the clusters are alive and correctly configured after the backup
         backupDbPing(backupData, true);
