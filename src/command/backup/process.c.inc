@@ -226,14 +226,14 @@ backupJobResult(
                         if (!pckReadBoolP(checksumPageResult))
                         {
                             checksumPageError = true;
+                            String *const message = strNew();
 
                             if (!pckReadBoolP(checksumPageResult))
                             {
                                 checksumPageErrorList = NULL;
 
-                                // ??? Update formatting after migration
-                                LOG_WARN_FMT(
-                                    "page misalignment in file %s: file size %" PRIu64 " is not divisible by page size %u",
+                                strCatFmt(
+                                    message, "page misalignment in file %s: file size %" PRIu64 " is not divisible by page size %u",
                                     strZ(fileLog), copySize, pageSize);
                             }
                             else
@@ -276,17 +276,17 @@ backupJobResult(
 
                                 // Make message plural when appropriate
                                 const char *const plural = errorTotalMin > 1 ? "s" : "";
-                                const String *const message = strNewFmt(
-                                    "invalid page checksum%s found in file %s at page%s %s", plural, strZ(fileLog), plural,
+                                strCatFmt(
+                                    message, "invalid page checksum%s found in file %s at page%s %s", plural, strZ(fileLog), plural,
                                     strZ(error));
-
-                                if (cfgOptionBool(cfgOptChecksumPageError))
-                                    THROW(ChecksumError, strZ(message));
-
-                                LOG_WARN(strZ(message));
-
-                                (*warningTotal)++;
                             }
+
+                            if (cfgOptionBool(cfgOptChecksumPageError))
+                                THROW(ChecksumError, strZ(message));
+
+                            LOG_WARN(strZ(message));
+
+                            (*warningTotal)++;
                         }
                     }
 

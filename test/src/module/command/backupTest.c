@@ -3174,7 +3174,7 @@ testRun(void)
                 "P00 DETAIL: copy segment 0000000105DB5DE000000002 to backup\n"
                 "P00   INFO: new backup label = 20191027-181320F\n"
                 "P00   INFO: full backup size = [SIZE], file total = 13\n"
-                "P00   WARN: backup command encountered 2 checksum warning(s), check the log file for details");
+                "P00   WARN: backup command encountered 3 checksum warning(s), check the log file for details");
 
             TEST_RESULT_STR_Z(
                 testBackupValidateP(storageRepo(), STRDEF(STORAGE_REPO_BACKUP "/20191027-181320F")),
@@ -3373,7 +3373,7 @@ testRun(void)
                 "P00   INFO: check archive for segment(s) 0000002C05DB8EB000000000:0000002C05DB8EB000000001\n"
                 "P00   INFO: new backup label = 20191027-181320F_20191030-014640I\n"
                 "P00   INFO: incr backup size = [SIZE], file total = 8\n"
-                "P00   WARN: backup command encountered 1 checksum warning(s), check the log file for details");
+                "P00   WARN: backup command encountered 2 checksum warning(s), check the log file for details");
 
             TEST_RESULT_STR_Z(
                 testBackupValidateP(storageRepo(), STRDEF(STORAGE_REPO_BACKUP "/latest")),
@@ -3482,7 +3482,8 @@ testRun(void)
                 "P00 DETAIL: copy segment 0000000105DB8EB000000000 to backup\n"
                 "P00 DETAIL: copy segment 0000000105DB8EB000000001 to backup\n"
                 "P00   INFO: new backup label = 20191030-014640F\n"
-                "P00   INFO: full backup size = [SIZE], file total = 14");
+                "P00   INFO: full backup size = [SIZE], file total = 14\n"
+                "P00   WARN: backup command encountered 1 checksum warning(s), check the log file for details");
 
             TEST_RESULT_STR_Z(
                 testBackupValidateP(storageRepo(), STRDEF(STORAGE_REPO_BACKUP "/latest")),
