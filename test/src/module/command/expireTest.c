@@ -2949,6 +2949,27 @@ testRun(void)
         TEST_RESULT_STRLST_Z(
             infoBackupDataLabelList(infoBackupChecksumErr, NULL),
             "20181119-152138F\n20181119-152800F\n20181119-152900F\n", "no backups expired since checksum error aborted expiration");
+
+        // -------------------------------------------------------------------------------------------------------------------------
+        TEST_TITLE("oldest retained backup has checksum error - checksum-page-error disabled so no error");
+
+        // With checksum-page-error disabled the checksum error on the oldest retained backup is not checked, so expiration
+        // proceeds normally
+        argListChecksum = strLstDup(argListAvoidWarn);
+        hrnCfgArgRawBool(argListChecksum, cfgOptChecksumPageError, false);
+        HRN_CFG_LOAD(cfgCmdExpire, argListChecksum);
+
+        TEST_ASSIGN(
+            infoBackupChecksumErr, infoBackupNewLoad(ioBufferReadNew(backupInfoChecksumErr), cipherSpecNewNone()),
+            "get backup.info with checksum error on middle full backup");
+
+        TEST_RESULT_UINT(
+            expireTimeBasedBackup(infoBackupChecksumErr, (time_t)1482182900, 0), 1,
+            "expire oldest backup despite checksum error on the backup that becomes the oldest retained");
+        TEST_RESULT_LOG("P00   INFO: repo1: expire time-based backup 20181119-152138F");
+        TEST_RESULT_STRLST_Z(
+            infoBackupDataLabelList(infoBackupChecksumErr, NULL), "20181119-152800F\n20181119-152900F\n",
+            "oldest backup expired, backup with checksum error retained");
     }
 
     // *****************************************************************************************************************************
