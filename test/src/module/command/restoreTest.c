@@ -3374,69 +3374,16 @@ testRun(void)
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("error on invalid page checksum when checksum-page-error=y");
 
-        const String *const repoPathChecksumThrow = STRDEF(TEST_PATH "/repo-checksum-throw");
+        // Reuse the backup written for the checksum-page-error=n test above
         const String *const pgPathChecksumThrow = STRDEF(TEST_PATH "/pg-checksum-throw");
 
         argListChecksum = strLstNew();
         hrnCfgArgRawZ(argListChecksum, cfgOptStanza, "test1");
-        hrnCfgArgRaw(argListChecksum, cfgOptRepoPath, repoPathChecksumThrow);
+        hrnCfgArgRaw(argListChecksum, cfgOptRepoPath, repoPathChecksumWarn);
         hrnCfgArgRaw(argListChecksum, cfgOptPgPath, pgPathChecksumThrow);
-        hrnCfgArgRawZ(argListChecksum, cfgOptSet, "20161219-212741F");
+        hrnCfgArgRawZ(argListChecksum, cfgOptSet, TEST_CKSUM_LABEL);
         hrnCfgArgRawBool(argListChecksum, cfgOptChecksumPageError, true);
         HRN_CFG_LOAD(cfgCmdRestore, argListChecksum);
-
-        Manifest *manifestChecksumThrow = NULL;
-
-        OBJ_NEW_BASE_BEGIN(Manifest, .childQty = MEM_CONTEXT_QTY_MAX)
-        {
-            manifestChecksumThrow = manifestNewInternal();
-            manifestChecksumThrow->pub.info = infoNew(REPOSITORY_FORMAT_DEFAULT, NULL);
-            manifestChecksumThrow->pub.data.backupLabel = strNewZ(TEST_CKSUM_LABEL);
-            manifestChecksumThrow->pub.data.pgVersion = PG_VERSION_11;
-            manifestChecksumThrow->pub.data.pgCatalogVersion = hrnPgCatalogVersion(PG_VERSION_11);
-            manifestChecksumThrow->pub.data.backupType = backupTypeFull;
-            manifestChecksumThrow->pub.data.backupTimestampStart = 1482182860;
-            manifestChecksumThrow->pub.data.backupTimestampCopyStart = 1482182861;
-            manifestChecksumThrow->pub.data.backupOptionOnline = true;
-            manifestChecksumThrow->pub.data.archiveStart = strNewZ("000000010000000000000007");
-            manifestChecksumThrow->pub.data.lsnStart = strNewZ("0/7000028");
-
-            // Data directory
-            HRN_MANIFEST_TARGET_ADD(manifestChecksumThrow, .name = MANIFEST_TARGET_PGDATA, .path = strZ(pgPathChecksumThrow));
-            HRN_MANIFEST_PATH_ADD(manifestChecksumThrow, .name = MANIFEST_TARGET_PGDATA);
-
-            // Global directory
-            HRN_MANIFEST_PATH_ADD(manifestChecksumThrow, .name = TEST_CKSUM_PGDATA PG_PATH_GLOBAL);
-
-            // PG_VERSION -- marked with a page checksum error so it triggers the checksum-page-error handling on restore
-            HRN_MANIFEST_FILE_ADD(
-                manifestChecksumThrow, .name = TEST_CKSUM_PGDATA PG_FILE_PGVERSION, .size = 3, .timestamp = 1482182860,
-                .checksumSha1 = "dd71038f3463f511ee7403dbcbc87195302d891c", .checksumPage = true, .checksumPageError = true);
-            HRN_STORAGE_PUT_Z(storageRepoWrite(), TEST_CKSUM_REPO_PATH PG_FILE_PGVERSION, PG_VERSION_11_Z "\n");
-
-            // pg_tblspc
-            HRN_MANIFEST_PATH_ADD(manifestChecksumThrow, .name = MANIFEST_TARGET_PGDATA "/" MANIFEST_TARGET_PGTBLSPC);
-
-            // Always sort
-            lstSort(manifestChecksumThrow->pub.targetList, sortOrderAsc);
-            lstSort(manifestChecksumThrow->pub.fileList, sortOrderAsc);
-            lstSort(manifestChecksumThrow->pub.linkList, sortOrderAsc);
-            lstSort(manifestChecksumThrow->pub.pathList, sortOrderAsc);
-        }
-        OBJ_NEW_END();
-
-        manifestSave(
-            manifestChecksumThrow,
-            storageWriteIo(
-                storageNewWriteP(storageRepoWrite(), STRDEF(STORAGE_REPO_BACKUP "/" TEST_CKSUM_LABEL "/" BACKUP_MANIFEST_FILE))));
-
-        // Write backup.info
-        HRN_INFO_PUT(storageRepoWrite(), INFO_BACKUP_PATH_FILE, TEST_RESTORE_BACKUP_INFO "\n" TEST_RESTORE_BACKUP_INFO_DB);
-
-        // Write archive.info
-        InfoArchive *infoArchiveChecksumThrow = infoArchiveNew(
-            PG_VERSION_11, 6569239123849665679, REPOSITORY_FORMAT_DEFAULT, NULL);
-        infoArchiveSaveFile(infoArchiveChecksumThrow, storageRepoWrite(), INFO_ARCHIVE_PATH_FILE_STR, cipherSpecNewNone());
 
         TEST_ERROR(
             hrnCmdRestore(), ChecksumError,
@@ -3444,9 +3391,12 @@ testRun(void)
 
         TEST_RESULT_LOG(
             "P00   INFO: repo1: restore backup set 20161219-212741F, recovery will start at [TIME]\n"
+            "P00   INFO: remap data directory to '" TEST_PATH "/pg-checksum-throw'\n"
             "P00 DETAIL: check '" TEST_PATH "/pg-checksum-throw' exists\n"
             "P00 DETAIL: create path '" TEST_PATH "/pg-checksum-throw/global'\n"
             "P00 DETAIL: create path '" TEST_PATH "/pg-checksum-throw/pg_tblspc'\n"
+            "P01 DETAIL: restore file " TEST_PATH "/pg-checksum-throw/postgresql.conf (10B, [PCT]) checksum"
+            " 1a49a3c2240449fee1422e4afcf44d5b96378511\n"
             "P00   WARN: invalid page checksum(s) found in file " TEST_PATH "/pg-checksum-throw/PG_VERSION\n"
             "P01 DETAIL: restore file " TEST_PATH "/pg-checksum-throw/PG_VERSION (3B, [PCT]) checksum"
             " dd71038f3463f511ee7403dbcbc87195302d891c\n"
@@ -3455,7 +3405,7 @@ testRun(void)
             "P00 DETAIL: sync path '" TEST_PATH "/pg-checksum-throw/pg_tblspc'\n"
             "P00   WARN: backup does not contain 'global/pg_control' -- cluster will not start\n"
             "P00 DETAIL: sync path '" TEST_PATH "/pg-checksum-throw/global'\n"
-            "P00   INFO: restore size = [SIZE], file total = 1");
+            "P00   INFO: restore size = [SIZE], file total = 2");
 
         #undef TEST_CKSUM_LABEL
         #undef TEST_CKSUM_PGDATA
