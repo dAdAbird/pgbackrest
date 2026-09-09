@@ -144,6 +144,47 @@ testRun(void)
 
     const Buffer *backupInfoBase = harnessInfoChecksumZ(strZ(backupInfoContent));
 
+    // backup.info with for checksum error cases
+    const Buffer *const backupInfoChecksumErr = harnessInfoChecksumZ(
+        "[backup:current]\n"
+        "20181119-152138F={\"backrest-format\":5,\"backrest-version\":\"2.08dev\","
+        "\"backup-archive-start\":\"000000010000000000000002\","
+        "\"backup-archive-stop\":\"000000010000000000000002\","
+        "\"backup-info-repo-size\":2369186,\"backup-info-repo-size-delta\":2369186,"
+        "\"backup-info-size\":20162900,\"backup-info-size-delta\":20162900,"
+        "\"backup-timestamp-start\":1482182800,\"backup-timestamp-stop\":1482182846,\"backup-type\":\"full\","
+        "\"db-id\":1,\"option-archive-check\":true,\"option-archive-copy\":false,\"option-backup-standby\":false,"
+        "\"option-checksum-page\":true,\"option-compress\":true,\"option-hardlink\":false,\"option-online\":true}\n"
+        "20181119-152800F={\"backrest-format\":5,\"backrest-version\":\"2.08dev\","
+        "\"backup-archive-start\":\"000000010000000000000004\","
+        "\"backup-archive-stop\":\"000000010000000000000004\","
+        "\"backup-error\":true,"
+        "\"backup-info-repo-size\":2369186,\"backup-info-repo-size-delta\":2369186,"
+        "\"backup-info-size\":20162900,\"backup-info-size-delta\":20162900,"
+        "\"backup-timestamp-start\":1482182870,\"backup-timestamp-stop\":1482182883,\"backup-type\":\"full\","
+        "\"db-id\":1,\"option-archive-check\":true,\"option-archive-copy\":false,\"option-backup-standby\":false,"
+        "\"option-checksum-page\":true,\"option-compress\":true,\"option-hardlink\":false,\"option-online\":true}\n"
+        "20181119-152900F={\"backrest-format\":5,\"backrest-version\":\"2.08dev\","
+        "\"backup-archive-start\":\"000000010000000000000006\","
+        "\"backup-archive-stop\":\"000000010000000000000006\","
+        "\"backup-error\":false,"
+        "\"backup-info-repo-size\":2369186,\"backup-info-repo-size-delta\":2369186,"
+        "\"backup-info-size\":20162900,\"backup-info-size-delta\":20162900,"
+        "\"backup-timestamp-start\":1482182900,\"backup-timestamp-stop\":1482182920,\"backup-type\":\"full\","
+        "\"db-id\":1,\"option-archive-check\":true,\"option-archive-copy\":false,\"option-backup-standby\":false,"
+        "\"option-checksum-page\":true,\"option-compress\":true,\"option-hardlink\":false,\"option-online\":true}\n"
+        "\n"
+        "[db]\n"
+        "db-catalog-version=201409291\n"
+        "db-control-version=942\n"
+        "db-id=1\n"
+        "db-system-id=6625592122879095702\n"
+        "db-version=\"9.4\"\n"
+        "\n"
+        "[db:history]\n"
+        "1={\"db-catalog-version\":201409291,\"db-control-version\":942,\"db-system-id\":6625592122879095702"
+        ",\"db-version\":\"9.4\"}");
+
     // Sleep the remainder of the current second. If cmdExpire() gets the same time as timeNow then expiration won't work as
     // expected in the tests.
     hrnSleepRemainder();
@@ -244,6 +285,30 @@ testRun(void)
         TEST_RESULT_STRLST_Z(
             infoBackupDataLabelList(infoBackup, NULL), "20181119-152900F\n20181119-152900F_20181119-152600D\n",
             "remaining backups correct");
+
+        // -------------------------------------------------------------------------------------------------------------------------
+        TEST_TITLE("oldest retained backup has checksum error - abort with error");
+
+        // checksum-page-error is on by default for the expire command
+        argList = strLstDup(argListBase);
+        hrnCfgArgRawZ(argList, cfgOptRepoRetentionFull, "2");
+        HRN_CFG_LOAD(cfgCmdExpire, argList);
+
+        // If the oldest full backup were expired, the middle one (with a checksum error) would become the oldest retained
+        // backup, and the newest full backup is retained regardless
+        InfoBackup *infoBackupChecksumErr = NULL;
+        TEST_ASSIGN(
+            infoBackupChecksumErr, infoBackupNewLoad(ioBufferReadNew(backupInfoChecksumErr), cipherSpecNewNone()),
+            "get backup.info with checksum error on middle full backup");
+
+        TEST_ERROR(
+            expireFullBackup(infoBackupChecksumErr, 0), ChecksumError,
+            "oldest retained backup 20181119-152800F contains invalid page checksum(s)\n"
+            "HINT: use info --set command to get details about errors in the backup.");
+
+        TEST_RESULT_STRLST_Z(
+            infoBackupDataLabelList(infoBackupChecksumErr, NULL),
+            "20181119-152138F\n20181119-152800F\n20181119-152900F\n", "no backups expired since checksum error aborted expiration");
     }
 
     // *****************************************************************************************************************************
@@ -254,50 +319,11 @@ testRun(void)
         StringList *argList = strLstDup(argListAvoidWarn);
         HRN_CFG_LOAD(cfgCmdExpire, argList);
 
-        // Create backup.info with backups covering all three states of the backup-error flag: true, false, and never recorded
-        const Buffer *const backupInfoChecksum = harnessInfoChecksumZ(
-            "[backup:current]\n"
-            "20181119-152138F={\"backrest-format\":5,\"backrest-version\":\"2.08dev\","
-            "\"backup-archive-start\":\"000000010000000000000002\","
-            "\"backup-archive-stop\":\"000000010000000000000002\","
-            "\"backup-error\":true,"
-            "\"backup-info-repo-size\":2369186,\"backup-info-repo-size-delta\":2369186,"
-            "\"backup-info-size\":20162900,\"backup-info-size-delta\":20162900,"
-            "\"backup-timestamp-start\":1482182846,\"backup-timestamp-stop\":1482182861,\"backup-type\":\"full\","
-            "\"db-id\":1,\"option-archive-check\":true,\"option-archive-copy\":false,\"option-backup-standby\":false,"
-            "\"option-checksum-page\":true,\"option-compress\":true,\"option-hardlink\":false,\"option-online\":true}\n"
-            "20181119-152800F={\"backrest-format\":5,\"backrest-version\":\"2.08dev\","
-            "\"backup-archive-start\":\"000000010000000000000004\","
-            "\"backup-archive-stop\":\"000000010000000000000004\","
-            "\"backup-error\":false,"
-            "\"backup-info-repo-size\":2369186,\"backup-info-repo-size-delta\":2369186,"
-            "\"backup-info-size\":20162900,\"backup-info-size-delta\":20162900,"
-            "\"backup-timestamp-start\":1482182877,\"backup-timestamp-stop\":1482182883,\"backup-type\":\"full\","
-            "\"db-id\":1,\"option-archive-check\":true,\"option-archive-copy\":false,\"option-backup-standby\":false,"
-            "\"option-checksum-page\":true,\"option-compress\":true,\"option-hardlink\":false,\"option-online\":true}\n"
-            "20181119-152900F={\"backrest-format\":5,\"backrest-version\":\"2.08dev\","
-            "\"backup-archive-start\":\"000000010000000000000006\","
-            "\"backup-archive-stop\":\"000000010000000000000006\","
-            "\"backup-info-repo-size\":2369186,\"backup-info-repo-size-delta\":2369186,"
-            "\"backup-info-size\":20162900,\"backup-info-size-delta\":20162900,"
-            "\"backup-timestamp-start\":1482182900,\"backup-timestamp-stop\":1482182920,\"backup-type\":\"full\","
-            "\"db-id\":1,\"option-archive-check\":true,\"option-archive-copy\":false,\"option-backup-standby\":false,"
-            "\"option-checksum-page\":true,\"option-compress\":true,\"option-hardlink\":false,\"option-online\":true}\n"
-            "\n"
-            "[db]\n"
-            "db-catalog-version=201409291\n"
-            "db-control-version=942\n"
-            "db-id=1\n"
-            "db-system-id=6625592122879095702\n"
-            "db-version=\"9.4\"\n"
-            "\n"
-            "[db:history]\n"
-            "1={\"db-catalog-version\":201409291,\"db-control-version\":942,\"db-system-id\":6625592122879095702"
-            ",\"db-version\":\"9.4\"}");
-
+        // backupInfoChecksumErr covers all three states of the backup-error flag: never recorded (20181119-152138F), true
+        // (20181119-152800F), and false (20181119-152900F)
         InfoBackup *infoBackup = NULL;
         TEST_ASSIGN(
-            infoBackup, infoBackupNewLoad(ioBufferReadNew(backupInfoChecksum), cipherSpecNewNone()), "get backup.info");
+            infoBackup, infoBackupNewLoad(ioBufferReadNew(backupInfoChecksumErr), cipherSpecNewNone()), "get backup.info");
 
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("no current backups - does nothing");
@@ -327,29 +353,29 @@ testRun(void)
         TEST_TITLE("backup-error flag never recorded - no warning");
 
         TEST_RESULT_VOID(
-            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152900F"), 0, false), "backup-error not set - no warning");
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152138F"), 0, false), "backup-error not set - no warning");
 
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("backup-error is false - no warning");
 
         TEST_RESULT_VOID(
-            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152800F"), 0, false), "backup-error false - no warning");
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152900F"), 0, false), "backup-error false - no warning");
 
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("backup-error is true, shouldFail=false - warning logged, no error thrown");
 
         TEST_RESULT_VOID(
-            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152138F"), 0, false), "backup-error true - warn only");
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152800F"), 0, false), "backup-error true - warn only");
         TEST_RESULT_LOG(
-            "P00   WARN: repo1: oldest retained backup 20181119-152138F contains invalid page checksum(s)\n"
+            "P00   WARN: repo1: oldest retained backup 20181119-152800F contains invalid page checksum(s)\n"
             "            HINT: use info --set command to get details about errors in the backup.");
 
         // -------------------------------------------------------------------------------------------------------------------------
         TEST_TITLE("backup-error is true, shouldFail=true - error thrown");
 
         TEST_ERROR(
-            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152138F"), 0, true), ChecksumError,
-            "oldest retained backup 20181119-152138F contains invalid page checksum(s)\n"
+            expireChecksumErrorCheck(infoBackup, STRDEF("20181119-152800F"), 0, true), ChecksumError,
+            "oldest retained backup 20181119-152800F contains invalid page checksum(s)\n"
             "HINT: use info --set command to get details about errors in the backup.");
     }
 
@@ -2900,6 +2926,29 @@ testRun(void)
             "P00   INFO: repo2: 9.4-1 remove archive, start = 000000010000000000000001, stop = 000000010000000000000003");
 
         harnessLogLevelReset();
+
+        // -------------------------------------------------------------------------------------------------------------------------
+        TEST_TITLE("oldest retained backup has checksum error - abort with error");
+
+        // checksum-page-error is on by default for the expire command
+        StringList *argListChecksum = strLstDup(argListAvoidWarn);
+        HRN_CFG_LOAD(cfgCmdExpire, argListChecksum);
+
+        // If the oldest full backup were expired, the middle one (with a checksum error) would become the oldest retained
+        // backup, and the newest full backup is retained regardless
+        InfoBackup *infoBackupChecksumErr = NULL;
+        TEST_ASSIGN(
+            infoBackupChecksumErr, infoBackupNewLoad(ioBufferReadNew(backupInfoChecksumErr), cipherSpecNewNone()),
+            "get backup.info with checksum error on middle full backup");
+
+        TEST_ERROR(
+            expireTimeBasedBackup(infoBackupChecksumErr, (time_t)1482182900, 0), ChecksumError,
+            "oldest retained backup 20181119-152800F contains invalid page checksum(s)\n"
+            "HINT: use info --set command to get details about errors in the backup.");
+
+        TEST_RESULT_STRLST_Z(
+            infoBackupDataLabelList(infoBackupChecksumErr, NULL),
+            "20181119-152138F\n20181119-152800F\n20181119-152900F\n", "no backups expired since checksum error aborted expiration");
     }
 
     // *****************************************************************************************************************************
