@@ -294,7 +294,7 @@ expireFullBackup(InfoBackup *const infoBackup, const unsigned int repoIdx)
             // If there are more full backups then the number to retain, then expire the oldest ones
             if (strLstSize(currentBackupList) > fullRetention)
             {
-                // If checksum-page-error is set, check the would-be-oldest retained backup and abort with an error if it has
+                // If checksum-page-error is set, check the would-be-oldest retained backup and terminate with an error if it has
                 // checksum errors.
                 if (cfgOptionBool(cfgOptChecksumPageError))
                 {
@@ -375,7 +375,7 @@ expireTimeBasedBackup(InfoBackup *const infoBackup, const time_t minTimestamp, c
             // If retention has not been met there is nothing to expire
             if (retentionMetBackupLabel != NULL)
             {
-                // If checksum-page-error is set, check the would-be-oldest retained backup and abort with an error if it has
+                // If checksum-page-error is set, check the would-be-oldest retained backup and terminate with an error if it has
                 // checksum errors.
                 if (cfgOptionBool(cfgOptChecksumPageError))
                     expireChecksumErrorCheck(infoBackup, retentionMetBackupLabel, repoIdx, true);
