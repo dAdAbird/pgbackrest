@@ -52,6 +52,23 @@
             </release-item>
         </release-bug-list>
 
+        <release-feature-list>
+            <release-item>
+                <github-issue id="2687"/>
+                <github-pull-request id="2833"/>
+
+                <release-item-contributor-list>
+                    <release-item-ideator id="greg.sabino.mullane"/>
+                    <release-item-contributor id="andrew.pogrebnoi"/>
+                    <release-item-reviewer id="douglas.j.hunley"/>
+                    <release-item-reviewer id="david.steele"/>
+                    <release-item-reviewer id="greg.sabino.mullane"/>
+                </release-item-contributor-list>
+
+                <p>Add <br-option>checksum-page-error</br-option> option to error on invalid page checksums.</p>
+            </release-item>
+        </release-feature-list>
+
         <release-improvement-list>
             <release-item>
                 <github-pull-request id="2783"/>
