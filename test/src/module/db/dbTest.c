@@ -327,10 +327,12 @@ testRun(void)
         HRN_PG_CONTROL_PUT(storagePgIdxWrite(0), PG_VERSION_12, .timeline = 5, .checkpoint = pgLsnFromStr(STRDEF("5/4")));
         HRN_PG_CONTROL_PUT(storagePgIdxWrite(1), PG_VERSION_12, .timeline = 5, .checkpoint = pgLsnFromStr(STRDEF("5/4")));
 
-        // Connect to primary and standby
+        // Connect to primary and standby. dbGet() verifies the standby is synced with the primary's current checkpoint before
+        // selecting it.
         HRN_PQ_SCRIPT_SET(
             HRN_PQ_SCRIPT_OPEN(1, "dbname='postgres' port=5432", PG_VERSION_12, TEST_PATH "/pg1", false, NULL, NULL),
-            HRN_PQ_SCRIPT_OPEN(2, "dbname='postgres' port=5433", PG_VERSION_12, TEST_PATH "/pg2", true, NULL, NULL));
+            HRN_PQ_SCRIPT_OPEN(2, "dbname='postgres' port=5433", PG_VERSION_12, TEST_PATH "/pg2", true, NULL, NULL),
+            HRN_PQ_SCRIPT_REPLAY_WAIT_GE_10(2, "5/4"));
 
         TEST_ASSIGN(db, dbGet(false, true, CFGOPTVAL_BACKUP_STANDBY_Y), "get primary and standby");
 
@@ -387,10 +389,12 @@ testRun(void)
         HRN_PG_CONTROL_PUT(storagePgIdxWrite(0), PG_VERSION_10, .timeline = 5, .checkpoint = pgLsnFromStr(STRDEF("5/5")));
         HRN_PG_CONTROL_PUT(storagePgIdxWrite(1), PG_VERSION_10, .timeline = 5, .checkpoint = pgLsnFromStr(STRDEF("5/5")));
 
-        // Connect to primary and standby
+        // Connect to primary and standby. dbGet() verifies the standby is synced with the primary's current checkpoint before
+        // selecting it.
         HRN_PQ_SCRIPT_SET(
             HRN_PQ_SCRIPT_OPEN(1, "dbname='postgres' port=5432", PG_VERSION_10, TEST_PATH "/pg1", false, NULL, NULL),
-            HRN_PQ_SCRIPT_OPEN(2, "dbname='postgres' port=5433", PG_VERSION_10, TEST_PATH "/pg2", true, NULL, NULL));
+            HRN_PQ_SCRIPT_OPEN(2, "dbname='postgres' port=5433", PG_VERSION_10, TEST_PATH "/pg2", true, NULL, NULL),
+            HRN_PQ_SCRIPT_REPLAY_WAIT_GE_10(2, "5/5"));
 
         TEST_ASSIGN(db, dbGet(false, true, CFGOPTVAL_BACKUP_STANDBY_Y), "get primary and standby");
 
