@@ -682,6 +682,137 @@ dbReplayWait(Db *const this, const String *const targetLsn, const uint32_t targe
 }
 
 /**********************************************************************************************************************************/
+FN_EXTERN String *
+dbCurrentWalLsn(Db *const this)
+{
+    FUNCTION_LOG_BEGIN(logLevelDebug);
+        FUNCTION_LOG_PARAM(DB, this);
+    FUNCTION_LOG_END();
+
+    ASSERT(this != NULL);
+
+    String *result;
+
+    MEM_CONTEXT_TEMP_BEGIN()
+    {
+        const String *const lsn = pckReadStrP(
+            dbQueryColumn(
+                this,
+                strNewFmt(
+                    "select pg_catalog.pg_current_%s_%s()::text", strZ(pgWalName(dbPgVersion(this))),
+                    strZ(pgLsnName(dbPgVersion(this))))));
+
+        MEM_CONTEXT_PRIOR_BEGIN()
+        {
+            result = strDup(lsn);
+        }
+        MEM_CONTEXT_PRIOR_END();
+    }
+    MEM_CONTEXT_TEMP_END();
+
+    FUNCTION_LOG_RETURN(STRING, result);
+}
+
+/**********************************************************************************************************************************/
+FN_EXTERN bool
+dbStandbyCheck(Db *const this, Db *const primary)
+{
+    FUNCTION_LOG_BEGIN(logLevelDebug);
+        FUNCTION_LOG_PARAM(DB, this);
+        FUNCTION_LOG_PARAM(DB, primary);
+    FUNCTION_LOG_END();
+
+    ASSERT(this != NULL);
+    ASSERT(primary != NULL);
+
+    bool result;
+
+    MEM_CONTEXT_TEMP_BEGIN()
+    {
+        if (dbPgControl(this).systemId != dbPgControl(primary).systemId)
+        {
+            THROW_FMT(
+                DbMismatchError, "standby system-id %" PRIu64 " does not match primary system-id %" PRIu64,
+                dbPgControl(this).systemId, dbPgControl(primary).systemId);
+        }
+
+        if (dbPgControl(this).timeline != dbPgControl(primary).timeline)
+        {
+            THROW_FMT(
+                DbMismatchError, "standby timeline %u does not match primary timeline %u", dbPgControl(this).timeline,
+                dbPgControl(primary).timeline);
+        }
+
+        const String *const replayLsnFunction = strNewFmt(
+            "pg_catalog.pg_last_%s_replay_%s()", strZ(pgWalName(dbPgVersion(this))), strZ(pgLsnName(dbPgVersion(this))));
+
+        const String *const primaryLsn = dbCurrentWalLsn(primary);
+        const String *const replayLsn = pckReadStrP(dbQueryColumn(this, strNewFmt("select %s::text", strZ(replayLsnFunction))));
+
+        if (replayLsn == NULL)
+        {
+            THROW_FMT(
+                DbMismatchError,
+                "unable to query replay lsn on the standby using '%s'\n"
+                "HINT: Is this a standby?",
+                strZ(replayLsnFunction));
+        }
+
+        if (pgLsnFromStr(replayLsn) > pgLsnFromStr(primaryLsn))
+            THROW_FMT(DbMismatchError, "standby replay lsn %s is ahead of primary lsn %s", strZ(replayLsn), strZ(primaryLsn));
+
+        // Standby is allowed to be behind the primary by up to 2 WAL segments before it is considered lagging.
+        if (pgLsnFromStr(primaryLsn) - pgLsnFromStr(replayLsn) <= (uint64_t)dbPgControl(primary).walSegmentSize * 2)
+        {
+            result = true;
+        }
+        else
+        {
+            // The standby is lagging so poll the replay lsn to check that it is making progress at all. Never wait longer than the
+            // db timeout since the caller is blocked while this runs and each lagging standby is checked in turn.
+            TimeMSec progressTimeout = dbDbTimeout(this) < 2000 ? dbDbTimeout(this) : 2000;
+
+            Wait *const wait = waitNew(progressTimeout);
+            bool progress = false;
+
+            do
+            {
+                const String *const replayLsnRecheck = pckReadStrP(
+                    dbQueryColumn(this, strNewFmt("select %s::text", strZ(replayLsnFunction))));
+
+                // Error when replay lsn is null which indicates that the standby was promoted since the prior query
+                if (replayLsnRecheck == NULL)
+                {
+                    THROW_FMT(
+                        DbMismatchError,
+                        "unable to query replay lsn on the standby using '%s'\n"
+                        "HINT: Is this a standby?",
+                        strZ(replayLsnFunction));
+                }
+
+                progress = pgLsnFromStr(replayLsnRecheck) > pgLsnFromStr(replayLsn);
+
+                protocolKeepAlive();
+            }
+            while (!progress && waitMore(wait));
+
+            if (!progress)
+            {
+                THROW_FMT(
+                    DbMismatchError, "standby replay lsn %s made no progress after %" PRIu64 "ms", strZ(replayLsn),
+                    progressTimeout);
+            }
+
+            // The standby makes progress (but is lagging).
+            result = false;
+        }
+    }
+    MEM_CONTEXT_TEMP_END();
+
+    FUNCTION_LOG_RETURN(BOOL, result);
+}
+
+/**********************************************************************************************************************************/
 FN_EXTERN void
 dbPing(Db *const this, const bool force)
 {
